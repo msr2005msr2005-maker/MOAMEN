@@ -1,0 +1,38 @@
+workflows:
+  flutter-android-build:
+    name: Flutter Android Build
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    
+    environment:
+      flutter: stable
+      # إذا كنت بحاجة إلى التوقيع، أضف android_signing هنا
+      # android_signing:
+      #   - your_keystore_reference
+    
+    scripts:
+      # الخطوة الرئيسية: قبول تراخيص Android SDK تلقائيًا
+      - name: Accept Android licenses
+        script: |
+          yes | sdkmanager --licenses || true
+      
+      # إعداد local.properties
+      - name: Set up local.properties
+        script: |
+          echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
+      
+      # الحصول على تبعيات Flutter
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      
+      # بناء APK (يمكن تغييره إلى appbundle أو --debug حسب الحاجة)
+      - name: Build APK
+        script: |
+          flutter build apk --release
+    
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      # إذا كنت تبني AAB، استخدم المسار التالي
+      # - build/**/outputs/**/*.aab
+      # - build/**/outputs/**/mapping.txt
