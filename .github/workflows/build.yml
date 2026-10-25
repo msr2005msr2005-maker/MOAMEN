@@ -1,26 +1,51 @@
-name: Build Moamen APK
+name: Build Flutter APK
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # يسمح لك بتشغيله يدوياً من GitHub
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
+      # 1. سحب الكود من المستودع
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. إعداد بيئة Java (مطلوبة لبناء أندرويد)
+      - name: Set up Java
+        uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
-      - uses: subosito/flutter-action@v2
+
+      # 3. إعداد بيئة Flutter
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.19.0' # يمكنك تغييرها للإصدار الذي تستخدمه
           channel: 'stable'
-      - run: flutter pub get
-      - run: yes | sdkmanager --licenses
-      - run: flutter build apk --release
-      - uses: actions/upload-artifact@v4
+          cache: true
+
+      # 4. جلب الحزم والمكتبات
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 5. قبول تراخيص الأندرويد (تم تصحيح هذا الجزء)
+      - name: Accept Android licenses
+        run: flutter doctor --android-licenses
+
+      # 6. بناء ملف APK
+      - name: Build APK
+        run: flutter build apk --release
+
+      # 7. رفع ملف APK كمخرجات (Artifact) لتتمكن من تحميله
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          name: moamen-apk
+          name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
