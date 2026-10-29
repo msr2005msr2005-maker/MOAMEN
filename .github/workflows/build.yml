@@ -2,48 +2,61 @@ name: Build Flutter APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main" ] # يشتغل لما ترفع كود على فرع main
   pull_request:
-    branches: [ "main", "master" ]
-  workflow_dispatch: # يسمح لك بتشغيله يدوياً من GitHub
+    branches: [ "main" ]
+  workflow_dispatch: # يسمح لك تشغله يدوياً من زر Actions
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # بيئة لينكس أسرع بكثير من ماك لبناء الأندرويد
 
     steps:
       # 1. سحب الكود من المستودع
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2. إعداد بيئة Java (مطلوبة لبناء أندرويد)
+      # 2. تجهيز بيئة جافا (مطلوبة لـ Android)
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 3. إعداد بيئة Flutter
+      # 3. تجهيز بيئة Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # يمكنك تغييرها للإصدار الذي تستخدمه
           channel: 'stable'
-          cache: true
+          cache: true # تفعيل الكاش الخاص بـ Flutter لتسريع البناء
 
-      # 4. جلب الحزم والمكتبات
+      # 4. تفعيل الكاش لملفات Gradle (أندرويد)
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 5. تنزيل الحزم والمكتبات
       - name: Install dependencies
         run: flutter pub get
 
-      # 5. قبول تراخيص الأندرويد (تم تصحيح هذا الجزء)
+      # 6. حل مشكلة تعليق التراخيص (Accept Android licenses)
+      # هذا الأمر يوافق تلقائياً على جميع التراخيص
       - name: Accept Android licenses
-        run: flutter doctor --android-licenses
+        run: |
+          yes | flutter doctor --android-licenses || true
 
-      # 6. بناء ملف APK
+      # 7. بناء ملف APK
+      # نستخدم --split-per-abi لتقليل حجم التطبيق، أو يمكنك حذفها لبناء APK واحد شامل
       - name: Build APK
         run: flutter build apk --release
 
-      # 7. رفع ملف APK كمخرجات (Artifact) لتتمكن من تحميله
+      # 8. رفع ملف الـ APK للتحميل
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
